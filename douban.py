@@ -7,14 +7,15 @@ Choose movie tag searching at
 And get movie ids via XHR at
     'http://www.douban.com/j/tag/items?start={start}&limit={limit}&topic_id={topic_id}&topic_name={topic}&mod=movie'
 
-Author:hejunjie.net
-2015/12/14
+Author : hejunjie.net
+Create at 2015/12/13
 """
 
 import copy
 import requests
 import re
-import threadpool
+import multiprocessing as mp
+import threading
 
 # Use placeholders
 URL_HOME = 'http://www.douban.com/tag/{tag}/?focus=movie'
@@ -35,10 +36,6 @@ HEADERS = {
                 '(KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36',
     #'X-Requested-With':'XMLHttpRequest'
 }
-
-# the ThreadPool
-POOL_WORKERS = 16
-pool = threadpool.ThreadPool(POOL_WORKERS)
 
 
 def gen_headers(ext_headers):
@@ -67,9 +64,20 @@ def get_topic_id(tag):
         return re.search('topic_id:\s+(\d+)', r.text).group(1)
 
 
+def store_id(id_list):
+    """
+    Worker's callback, receiving get_info' result and store it in file.
+    Invoked in the same result_handler_thread, not the main-thread.
+    """
+    with open('id_list.txt', 'a') as f:
+        for _id in id_list:
+            f.write('%s\n' % _id)
+            print _id
+
+
 def do_xhr(tag, topic_id, start, return_total=False):
     """
-    Sub-jobs dispatched by 'fetch_movie_ids'.
+    Secondary Worker job.
     Do XHR to fetch movie list, and extract ids.
     Return total entries under this tag if <return_total> and
     a list of <limit=XHR_LIMIT> ids after <start>
@@ -99,48 +107,39 @@ def do_xhr(tag, topic_id, start, return_total=False):
         return id_list
 
 
-def fetch_movie_ids(tag):
+def get_info(tag):
     """
-    Primary worker job.
+    Primary Worker job.
     Get the sum of movie entries under this tag,
-    and dispatch more sub jobs to worker thread.
+    and the first entry list.
     """
     topic_id = get_topic_id(tag)
     total, id_list = do_xhr(tag, topic_id, 0, return_total=True)
+    store_id(id_list)
 
-    # sub-jobs' task  is in the range of (XHR_LIMIT, total) whose step length is XHR_LIMIT
-    reqs = threadpool.makeRequests(
-        do_xhr,
-        [([tag, topic_id, start], None)
-         for start in range(XHR_LIMIT, total, XHR_LIMIT)],
-        callback=store_movie_ids)
-    [pool.putRequest(req) for req in reqs]
-    return id_list
-
-
-def store_movie_ids(work_request, id_list):
-    """
-    Worker's callback, receiving fetch_movie_ids' result and store it in file.
-    """
-    with open('id_list.txt', 'a') as f:
-        for _id in id_list:
-            f.write('%s\n' % _id)
-            print _id
-
-
-def dispatch_jobs():
-    """
-    dispatch primary jobs.
-    """
-    reqs = threadpool.makeRequests(fetch_movie_ids,
-                                   [i for i in range(1888, 2016)],
-                                   callback=store_movie_ids)
-    [pool.putRequest(req) for req in reqs]
-    pool.wait()
-    pool.dismissWorkers(POOL_WORKERS)
+    return {'tag': tag, 'topic_id': topic_id, 'total': total}
 
 
 if __name__ == '__main__':
     import os
-    os.system('mv id_list.txt id_list.txt.bac')
-    dispatch_jobs()
+    os.system('[ -f id_list.txt ] && mv id_list.txt id_list.txt.bac')
+
+    pool = mp.Pool(processes=20)
+
+    # apply primary jobs
+    results = [pool.apply_async(get_info,
+                                args=(i, ), ) for i in range(1888, 2016)]
+
+    # apply secondary jobs
+    for res in results:
+        r = res.get()
+
+        # sub-jobs' task  is in the range of (XHR_LIMIT, total)
+        # whose step length is XHR_LIMIT
+        for start in range(XHR_LIMIT, r['total'], XHR_LIMIT):
+            pool.apply_async(do_xhr,
+                             args=(r['tag'], r['topic_id'], start),
+                             callback=store_id)
+
+    pool.close()
+    pool.join()

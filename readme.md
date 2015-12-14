@@ -7,6 +7,9 @@ But encountered the same [bug](https://github.com/SpotlightKid/threadpool/issues
 
 It may have lost some entries due to this bug.
 
+##2015.12.15
+Switch to [multiprocessing](https://docs.python.org/2/library/multiprocessing.html), and the amount is the same, 80608.
+
 ##原则
 主要是通过`AJAX`来获取电影信息，因为直接访问HTML源码太花时间了。而且直接访问`API`跟直接访问网页的被封概率应该不一样吧？
 
