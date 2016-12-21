@@ -1,14 +1,14 @@
 #统计豆瓣电影条目
 
+##2015.12.15
+Switch to [multiprocessing](https://docs.python.org/2/library/multiprocessing.html), and the amount is the same, 80608.
+
 ##2015.12.14
 Got `80608` [entries](https://github.com/jun-kai-xin/douban/blob/55fc2c3ad938e6f771f6435b1247a041abdb076f/id_list.txt) using [threadpool](https://github.com/SpotlightKid/threadpool).
 
 But encountered the same [bug](https://github.com/SpotlightKid/threadpool/issues/1) as [all3g](https://github.com/all3g) did.
 
 It may have lost some entries due to this bug.
-
-##2015.12.15
-Switch to [multiprocessing](https://docs.python.org/2/library/multiprocessing.html), and the amount is the same, 80608.
 
 ##原则
 主要是通过`AJAX`来获取电影信息，因为直接访问HTML源码太花时间了。而且直接访问`API`跟直接访问网页的被封概率应该不一样吧？
@@ -35,7 +35,7 @@ http://www.douban.com/j/tag/items?start=9&limit=6&topic_id=65330&topic_name=2015
 有且只有一个匹配
 
 ```python
-pattern='http://img3\.douban\.com/misc/mixed_static/.*?\.js'
+pattern=scrapy
 ```
 
 从js文件提取或直接从HTML源码获取
@@ -57,7 +57,7 @@ var payload = {
 'Accept-Encoding':'gzip, deflate, sdch'，
 'Accept-Language':'en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4'，
 'Connection':'keep-alive'，
-'Referer':'http://www.douban.com/tag/2015/?focus=movie'，
+'Referer':scrapy，
 'User-Agent':'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.80 Safari/537.36'，
 'X-Requested-With':'XMLHttpRequest'
 ```
@@ -69,7 +69,7 @@ var payload = {
 在`XHR`返回的json数据中提取id：
 
 ```python
-ptn = r'<a\s+href="http://movie\.douban\.com/subject/(\d+)/\?from=tag"\s+class="title".*?>'
+ptn = scrapy
 ```
 
 ##查漏
