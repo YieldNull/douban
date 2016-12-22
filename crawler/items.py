@@ -7,6 +7,10 @@ class SeedItem(Item):
     mids = Field()
 
 
+class Movie404Item(Item):
+    mid = Field()
+
+
 class MovieItem(Item):
     mid = Field()
     subtype = Field()

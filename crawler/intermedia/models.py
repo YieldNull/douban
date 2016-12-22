@@ -6,6 +6,7 @@ from crawler.intermedia import db, BaseModel
 class Movie(BaseModel):
     mid = IntegerField(primary_key=True)
     crawled = BooleanField(default=False)
+    require_login = BooleanField(default=False)
 
 
 class Actor(BaseModel):

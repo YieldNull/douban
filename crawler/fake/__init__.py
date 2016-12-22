@@ -29,3 +29,6 @@ _chars = string.digits + string.ascii_letters
 
 def _rand_string(length):
     return ''.join([random.choice(_chars) for _ in range(length)])
+
+
+from .manager import FakeManager

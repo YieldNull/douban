@@ -3,21 +3,29 @@ import re
 from scrapy import Request
 from scrapy import Spider
 
-from crawler.items import MovieItem
+from crawler.intermedia import Movie
+from crawler.items import MovieItem, Movie404Item
+
+import logging
 
 
 class MovieSpider(Spider):
     name = 'movie'
+    handle_httpstatus_list = [404, 302]
 
     def start_requests(self):
-        yield Request(url='https://movie.douban.com/subject/25864085/',
-                      headers={
-                          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) '
-                                        'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36'},
-                      meta={'mid': 25864085})
+        for movie in Movie.select().where(Movie.crawled == False):  # \
+            # .order_by(fn.Random()).limit(500):
+            yield Request(url='https://movie.douban.com/subject/{:d}/?from=tag'.format(movie.mid),
+                          meta={'mid': movie.mid})
 
     def parse(self, response):
         mid = response.meta['mid']
+
+        if response.status in self.handle_httpstatus_list:
+            logging.info('HTTP {:d}, Login required: {:d}'.format(response.status, mid))
+            yield Movie404Item(mid=mid)
+            raise StopIteration()
 
         # 基本信息
         info = response.xpath('//div[@id="info"]')
@@ -31,7 +39,15 @@ class MovieSpider(Spider):
             original_title = ' '.join(names[1:])
 
         year = response.xpath('//*[@id="content"]/h1/span[2]/text()').extract_first()
-        year = year.replace('(', '').replace(')', '')
+
+        if year:
+            match = re.search('\(\s*(\d+).*?\)', year)
+            if match:
+                year = match.group(1)
+            else:
+                year = -1
+        else:
+            year = -1
 
         directors = self._get_actor(info, '导演')
         writers = self._get_actor(info, '编剧')
@@ -57,7 +73,8 @@ class MovieSpider(Spider):
         if duration:
             subtype = 'movie'
         else:
-            duration = info.re_first('<span.*?>单集片长:</span>(.*?)分钟<br/?>').strip()  # 电视剧单集片长
+            duration = info.re_first('<span.*?>单集片长:</span>.*?(\d+)分钟.*?<br/?>')  # 电视剧单集片长
+            duration = duration.strip() if duration else 0
             subtype = 'tv'
 
         # 以下电视剧独有
@@ -83,8 +100,14 @@ class MovieSpider(Spider):
         rating_info = response.xpath('//div[@id="interest_sectl"]')
 
         rating = rating_info.xpath('.//strong[@property="v:average"]/text()').extract_first()
-        rating_count = rating_info.xpath('.//span[@property="v:votes"]/text()').extract_first()
-        rating_map = rating_info.re('<span class="rating_per">(\d+\.\d+)%</span>')
+
+        if rating:
+            rating_count = rating_info.xpath('.//span[@property="v:votes"]/text()').extract_first()
+            rating_map = rating_info.re('<span class="rating_per">(\d+\.\d+)%</span>')
+        else:
+            rating = 0
+            rating_count = 0
+            rating_map = [0, 0, 0, 0]
 
         # 推荐的其它电影
         recommendations = response.xpath('//div[@id="recommendations"]') \
@@ -98,14 +121,19 @@ class MovieSpider(Spider):
                          rating=float(rating), rating_count=int(rating_count), rating_map=rating_map,
                          season=season, seasons_count=seasons_count, episodes_count=episodes_count,
                          recommendations=recommendations)
+
+        logging.info('Got movie {:s}, mid:{:d}'.format(title, mid))
+
         yield item
 
     @staticmethod
     def _get_actor(info, cn_name):
         actors = []
         for link in info.xpath('//span[preceding-sibling::span[text()="{}"]]'.format(cn_name)).xpath('a'):
-            aid = link.xpath('@href').re_first('.*?/(\d+)/')
+            aid = link.xpath('@href').re_first('/celebrity/(\d+)/')
             actor = link.xpath('text()').extract_first()
 
-            actors.append((int(aid), actor))
+            aid = int(aid) if aid else -1
+            actors.append((aid, actor))
+
         return actors

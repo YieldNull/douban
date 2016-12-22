@@ -1,4 +1,4 @@
 *.pyc
-tests/files
-*.db
 .idea
+*.db
+*.log
