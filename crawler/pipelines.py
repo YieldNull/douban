@@ -68,7 +68,11 @@ class MoviePipeline(object):
         mid = item['mid']
 
         if isinstance(item, Movie404Item):
-            Movie.update(require_login=True).where(Movie.mid == mid).execute()
+            if item['logged_in']:
+                logging.error('Broken link: {:d}'.format(mid))
+                Movie.delete().where(Movie.mid == mid).execute()  # 登录之后还是访问不了，表示不存在，直接删除之
+            else:
+                Movie.update(require_login=True).where(Movie.mid == mid).execute()  # 表示需要登录
             return item
 
         self._store_actors(item['directors'])
@@ -79,7 +83,7 @@ class MoviePipeline(object):
         data = dict(item)
         data.pop('recommendations')
 
-        Movie.update(crawled=True).where(Movie.mid == mid).execute()
+        Movie.update(crawled=True).where(Movie.mid == mid).execute()  # 不管需不需要登录，表示已爬取
 
         try:
             self.db[self.collection_name].insert(data)

@@ -9,6 +9,7 @@ class SeedItem(Item):
 
 class Movie404Item(Item):
     mid = Field()
+    logged_in = Field()
 
 
 class MovieItem(Item):

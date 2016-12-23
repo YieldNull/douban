@@ -1,6 +1,7 @@
 from peewee import SqliteDatabase, Model
+from scrapy.conf import settings
 
-db = SqliteDatabase('douban.db')
+db = SqliteDatabase(settings.get('SQLITE_DATABASE', 'peewee.db'))
 
 
 class BaseModel(Model):

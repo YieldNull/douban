@@ -1,30 +1,52 @@
 import re
+import logging
 
-from scrapy import Request
-from scrapy import Spider
-
+from scrapy import Spider, Request
 from crawler.intermedia import Movie
 from crawler.items import MovieItem, Movie404Item
 
-import logging
-
 
 class MovieSpider(Spider):
+    """
+    电影详情页爬虫
+    """
+
     name = 'movie'
-    handle_httpstatus_list = [404, 302]
+    handle_httpstatus_list = [404, 302]  # 404,302 代表需要登录才能查看。403 在DownloaderMiddleware中处理
 
     def start_requests(self):
-        for movie in Movie.select().where(Movie.crawled == False):  # \
-            # .order_by(fn.Random()).limit(500):
-            yield Request(url='https://movie.douban.com/subject/{:d}/?from=tag'.format(movie.mid),
-                          meta={'mid': movie.mid})
+        """
+        从数据库读取没有爬取的影片，进行爬取；并不断循环，直到所有影片都爬完
+        爬取过程中并**不要**产生新的Request，而是将其对应的mid存到数据库
+        :return:
+        """
+        data_set = Movie.select().where(Movie.crawled == False)
+        while data_set.count() > 0:
+
+            logging.info('Dataset count:{:d}'.format(data_set.count()))
+
+            for movie in data_set:
+                yield Request(url='https://movie.douban.com/subject/{:d}/?from=tag'.format(movie.mid),
+                              meta={
+                                  'mid': movie.mid,
+                                  'login': movie.require_login,  # 加入login字段，DownloaderMiddleware判断加何种Cookie
+                              },
+                              dont_filter=movie.require_login)  # 需要登录的电影不需要查重，因为会再次访问
+
+            # 还有一部分正在请求，因此会有些重复
+            data_set = Movie.select().where(Movie.crawled == False)
 
     def parse(self, response):
+        """
+        返回 MovieItem 或 Movie404Item，前者表示成功爬取，后者表示需要登录
+        :param response:
+        :return:
+        """
         mid = response.meta['mid']
 
         if response.status in self.handle_httpstatus_list:
             logging.info('HTTP {:d}, Login required: {:d}'.format(response.status, mid))
-            yield Movie404Item(mid=mid)
+            yield Movie404Item(mid=mid, logged_in=response.meta['login'])
             raise StopIteration()
 
         # 基本信息
@@ -40,6 +62,7 @@ class MovieSpider(Spider):
 
         year = response.xpath('//*[@id="content"]/h1/span[2]/text()').extract_first()
 
+        # 各种各样的year，也是醉了
         if year:
             match = re.search('\(\s*(\d+).*?\)', year)
             if match:
@@ -128,6 +151,12 @@ class MovieSpider(Spider):
 
     @staticmethod
     def _get_actor(info, cn_name):
+        """
+        获取详情页中包含的celebrity信息
+        :param info: response.xpath('//div[@id="info"]')
+        :param cn_name: 导演？编剧？主演？
+        :return: [(aid,actor)...], 有的actor没有对应的链接，则aid=-1
+        """
         actors = []
         for link in info.xpath('//span[preceding-sibling::span[text()="{}"]]'.format(cn_name)).xpath('a'):
             aid = link.xpath('@href').re_first('/celebrity/(\d+)/')
