@@ -16,6 +16,8 @@ class TestFakeBasics(unittest.TestCase):
             'Accept-Language': 'en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4',
         }
 
+        self.url = 'https://movie.douban.com/subject/26362351/'
+
     def test_rand_cookie(self):
         """
         测试伪造的Cookie是否可以使用
@@ -27,7 +29,7 @@ class TestFakeBasics(unittest.TestCase):
 
         headers['Cookie'] = fake.rand_cookie()
 
-        resp = requests.get('http://localhost:5000', headers=headers)
+        resp = requests.get(self.url, headers=headers)
         self.assertNotEqual(403, resp.status_code)
 
     def test_user_agents(self):
@@ -44,9 +46,11 @@ class TestFakeBasics(unittest.TestCase):
         for agent in USER_AGENTS:
             headers['User-Agent'] = agent
 
-            resp = fake_response_from_url('https://movie.douban.com/subject/26362351/', headers=headers)
+            print(agent)
+
+            resp = fake_response_from_url(self.url, headers=headers)
             self.assertNotEqual(403, resp.status)
 
             spider = MovieSpider()
             for item in spider.parse(resp):
-                self.assertIsNotNone(item['rating'])
+                self.assertNotEqual(item['rating'], 0)

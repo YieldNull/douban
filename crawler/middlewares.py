@@ -43,7 +43,7 @@ class DownloaderMiddleware(object):
                 request.headers.pop('User-Agent')
                 request.headers.pop('Cookie')  # 复制原有Request对象，移除UA,Cookie,将新对象加入待爬队列
 
-            return request
+            return request  # 不经过filter
         else:
             self.manager.succeed_fake_pair(fake_pair)  # 持续403 counter清零
 

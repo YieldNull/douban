@@ -2,6 +2,8 @@ import re
 import logging
 
 from scrapy import Spider, Request
+from scrapy.exceptions import CloseSpider
+
 from crawler.intermedia import Movie
 from crawler.items import MovieItem, Movie404Item
 
@@ -29,9 +31,8 @@ class MovieSpider(Spider):
                 yield Request(url='https://movie.douban.com/subject/{:d}/?from=tag'.format(movie.mid),
                               meta={
                                   'mid': movie.mid,
-                                  'login': movie.require_login,  # 加入login字段，DownloaderMiddleware判断加何种Cookie
-                              },
-                              dont_filter=movie.require_login)  # 需要登录的电影不需要查重，因为会再次访问
+                                  'login': movie.require_login(),  # 加入login字段，DownloaderMiddleware判断加何种Cookie
+                              }, dont_filter=movie.require_login())  # 不要filter了
 
             # 还有一部分正在请求，因此会有些重复
             data_set = Movie.select().where(Movie.crawled == False)
@@ -51,6 +52,10 @@ class MovieSpider(Spider):
 
         # 基本信息
         info = response.xpath('//div[@id="info"]')
+
+        if not info:
+            logging.info('Bad response. {:s}'.format(response.text))
+            raise CloseSpider('IP is restricted')  # 停掉
 
         title = response.xpath('//*[@id="content"]/h1/span[1]/text()').extract_first()
         names = title.split()

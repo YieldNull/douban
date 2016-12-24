@@ -4,14 +4,16 @@ from crawler.intermedia import db, BaseModel
 
 
 class Movie(BaseModel):
-    """
-    全部爬完之后
-    常规       crawled:True require_login:False
-    需要登录   crawled:True require_login:True
-    """
+    TYPE_NORMAL = 0
+    TYPE_LOGIN = 1
+    TYPE_BROKEN = 2
+
     mid = IntegerField(primary_key=True)
     crawled = BooleanField(default=False)
-    require_login = BooleanField(default=False)
+    type = IntegerField(default=TYPE_NORMAL)
+
+    def require_login(self):
+        return self.type == self.TYPE_LOGIN
 
 
 class Actor(BaseModel):

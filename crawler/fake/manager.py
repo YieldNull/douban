@@ -33,10 +33,12 @@ class FakeManager(object):
         return random.choice(self.pool)
 
     def pop_fake_pair(self, fake_pair: FakePair):
-        self.pool.remove(fake_pair)
-        self.pool.append(FakePair(fake_pair.agent, rand_cookie()))
 
-        self.continuous_forbid_count += 1
+        if fake_pair in self.pool:  # 有可能多个403Request使用同一个fake_pair,已经被移除
+            self.pool.remove(fake_pair)
+            self.pool.append(FakePair(fake_pair.agent, rand_cookie()))
+            self.continuous_forbid_count += 1
+
         return self.continuous_forbid_count >= self.forbid_threshold
 
     def succeed_fake_pair(self, fake_pair: FakePair):
