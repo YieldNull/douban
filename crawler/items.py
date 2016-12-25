@@ -50,4 +50,5 @@ class MovieItem(Item):
 
 
 class ActorItem(Item):
-    pass
+    aid = Field()
+    mids = Field()

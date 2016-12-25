@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import pymongo
 
 from pymongo.errors import DuplicateKeyError
@@ -9,6 +7,7 @@ from crawler.intermedia import Actor, Movie
 from peewee import IntegrityError, DoesNotExist
 
 from crawler.items import Movie404Item
+from crawler.spiders.actor import ActorSpider
 from crawler.spiders.movie import MovieSpider
 from crawler.spiders.seeds import SeedSpider
 
@@ -113,3 +112,35 @@ class MoviePipeline(object):
             except DoesNotExist:
                 self.logger.info('Got a new movie not in db:{:d}. From:{:d}'.format(mid, source))
                 Movie.create(mid=mid)
+
+
+class ActorPipeline(object):
+    def __init__(self):
+        self.logger = logging.getLogger('ActorPipeline')
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        return cls()
+
+    def open_spider(self, spider):
+        pass
+
+    def close_spider(self, spider):
+        pass
+
+    def process_item(self, item, spider):
+        if spider.name != ActorSpider.name:
+            return item
+
+        aid = item['aid']
+        Actor.update(crawled=True).where(Actor.aid == aid).execute()
+
+        for mid in item['mids']:
+            mid = int(mid)
+            try:
+                Movie.create(mid=mid)
+                self.logger.info('Got a new movie not in db:{:d}. From:{:d}'.format(mid, aid))
+            except IntegrityError:
+                continue
+
+        return item
