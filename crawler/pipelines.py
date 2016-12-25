@@ -46,6 +46,8 @@ class MoviePipeline(object):
         self.mongo_uri = mongo_uri
         self.mongo_db = mongo_db
 
+        self.logger = logging.getLogger('MoviePipeline')
+
     @classmethod
     def from_crawler(cls, crawler):
         return cls(
@@ -69,7 +71,7 @@ class MoviePipeline(object):
 
         if isinstance(item, Movie404Item):
             if item['logged_in']:
-                logging.error('Broken link: {:d}'.format(mid))
+                self.logger.error('Broken link: {:d}'.format(mid))
 
                 # 登录之后还是访问不了，表示不存在
                 Movie.update(type=Movie.TYPE_BROKEN, crawled=True).where(Movie.mid == mid).execute()
@@ -95,8 +97,7 @@ class MoviePipeline(object):
         else:
             return item
 
-    @staticmethod
-    def _store_actors(actors):
+    def _store_actors(self, actors):
         for (aid, actor) in actors:
             if aid > 0:
                 try:
@@ -104,12 +105,11 @@ class MoviePipeline(object):
                 except IntegrityError:
                     continue
 
-    @staticmethod
-    def _store_movies(source, movies):
+    def _store_movies(self, source, movies):
         for mid in movies:
             mid = int(mid)
             try:
                 Movie.get(Movie.mid == mid)
             except DoesNotExist:
-                logging.info('Got a new movie not in db:{:d}. From:{:d}'.format(mid, source))
+                self.logger.info('Got a new movie not in db:{:d}. From:{:d}'.format(mid, source))
                 Movie.create(mid=mid)

@@ -1,13 +1,13 @@
-from scrapy import Request
-from scrapy import Spider
-
 import re
 import datetime
 import json
+import logging
 
+from scrapy import Request
+from scrapy import Spider
 from crawler.items import SeedItem
 
-import logging
+logger = logging.getLogger('SeedSpider')
 
 
 class SeedSpider(Spider):
@@ -34,7 +34,7 @@ class SeedSpider(Spider):
         if m:
             tid = m.group(1)
 
-            logging.info('Got topic id for tag {:d} :{:s}'.format(tag, tid))
+            logger.info('Got topic id for tag {:d} :{:s}'.format(tag, tid))
 
             yield self._gen_api_request(tag, tid, 0)
         else:
@@ -51,7 +51,7 @@ class SeedSpider(Spider):
         mids = re.findall('<a\s+href="https://movie\.douban\.com/subject/(\d+)/\?from=tag"\s+class="title".*?>',
                           data['html'])
 
-        logging.info('Got {:d} mids from {:s}.'.format(len(mids), response.url))
+        logger.info('Got {:d} mids from {:s}.'.format(len(mids), response.url))
 
         yield SeedItem(mids=mids)
 

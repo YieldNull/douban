@@ -11,6 +11,7 @@ class DownloaderMiddleware(object):
 
     def __init__(self):
         self.manager = FakeManager()
+        self.logger = logging.getLogger('DownloaderMiddleware')
 
     def process_request(self, request, spider):
 
@@ -35,7 +36,7 @@ class DownloaderMiddleware(object):
                 spider.crawler.engine.close_spider(spider, 'Too many continuous 403 encountered')
                 raise IgnoreRequest()
             else:
-                logging.info(
+                self.logger.info(
                     '403 Forbidden: Re-Schedule request. '.format(str(fake_pair)))
 
                 # 重试, 不会经过查重

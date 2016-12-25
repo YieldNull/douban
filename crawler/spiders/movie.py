@@ -1,11 +1,15 @@
 import re
 import logging
+import datetime
+import random
 
 from scrapy import Spider, Request
 from scrapy.exceptions import CloseSpider
 
 from crawler.intermedia import Movie
 from crawler.items import MovieItem, Movie404Item
+
+logger = logging.getLogger('MovieSpider')
 
 
 class MovieSpider(Spider):
@@ -22,17 +26,22 @@ class MovieSpider(Spider):
         爬取过程中并**不要**产生新的Request，而是将其对应的mid存到数据库
         :return:
         """
+        year = datetime.datetime.now().year
+
         data_set = Movie.select().where(Movie.crawled == False)
+
         while data_set.count() > 0:
 
-            logging.info('Dataset count:{:d}'.format(data_set.count()))
+            logger.info('Dataset count:{:d}'.format(data_set.count()))
 
             for movie in data_set:
                 yield Request(url='https://movie.douban.com/subject/{:d}/?from=tag'.format(movie.mid),
+                              headers={'Referer': 'https://www.douban.com/tag/{:d}/?source=topic_search'.format(
+                                  random.randint(1888, year))},
                               meta={
                                   'mid': movie.mid,
-                                  'login': movie.require_login(),  # 加入login字段，DownloaderMiddleware判断加何种Cookie
-                              }, dont_filter=movie.require_login())  # 不要filter了
+                                  'login': movie.require_login()},  # 加入login字段，DownloaderMiddleware判断加何种Cookie
+                              dont_filter=movie.require_login())  # 不要filter了
 
             # 还有一部分正在请求，因此会有些重复
             data_set = Movie.select().where(Movie.crawled == False)
@@ -44,9 +53,23 @@ class MovieSpider(Spider):
         :return:
         """
         mid = response.meta['mid']
+        logged_in = str(response.meta['login'])
 
         if response.status in self.handle_httpstatus_list:
-            logging.info('HTTP {:d}, Login required: {:d}'.format(response.status, mid))
+            logger.info('HTTP {:d}, Login required. mid: {:d}. logged_in:{:s}'.format(response.status, mid, logged_in))
+
+            if response.status == 302:  # 有些要登录才能访问的页面也是302
+                location = response.headers.get('Location', 'None')
+                location = str(location, 'utf-8')
+
+                logger.info('Location:{:s}'.format(location))
+
+                # 已登录，被禁，302跳到验证码页面
+                if location.find('sorry') > 0:  # https://www.douban.com/misc/sorry?original-url=...
+                    yield None
+                    raise CloseSpider('IP is restricted')
+
+            # broken link
             yield Movie404Item(mid=mid, logged_in=response.meta['login'])
             raise StopIteration()
 
@@ -54,7 +77,7 @@ class MovieSpider(Spider):
         info = response.xpath('//div[@id="info"]')
 
         if not info:
-            logging.info('Bad response. {:s}'.format(response.text))
+            logger.info('Bad response, logged_in:{:s}. {:s}'.format(logged_in, response.text))
             raise CloseSpider('IP is restricted')  # 停掉
 
         title = response.xpath('//*[@id="content"]/h1/span[1]/text()').extract_first()
@@ -150,7 +173,7 @@ class MovieSpider(Spider):
                          season=season, seasons_count=seasons_count, episodes_count=episodes_count,
                          recommendations=recommendations)
 
-        logging.info('Got movie {:s}, mid:{:d}'.format(title, mid))
+        logger.info('Got movie {:s}, mid:{:d}, logged_in:{:s}'.format(title, mid, logged_in))
 
         yield item
 

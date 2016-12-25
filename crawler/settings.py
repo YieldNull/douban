@@ -9,7 +9,7 @@ ROBOTSTXT_OBEY = False
 COOKIES_ENABLED = False
 
 LOGIN_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36'
-LOGIN_COOKIE = 'ue="isso_yieldnull@163.com"; dbcl2="155416755:shAzB/1dz2E"; bid=oO6QUb-aIMc; ps=y; ap=1; ck=MzAm; push_noty_num=0; push_doumail_num=0'
+LOGIN_COOKIE = ''
 
 CONCURRENT_REQUESTS = 4
 
