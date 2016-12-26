@@ -8,12 +8,13 @@ NEWSPIDER_MODULE = 'crawler.spiders'
 ROBOTSTXT_OBEY = False
 COOKIES_ENABLED = False
 
+LOGIN_ENABLED = False
 LOGIN_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.95 Safari/537.36'
 LOGIN_COOKIE = ''
 
-CONCURRENT_REQUESTS = 1
+CONCURRENT_REQUESTS = 4
 
-CONCURRENT_REQUESTS_PER_DOMAIN = 1
+CONCURRENT_REQUESTS_PER_DOMAIN = 4
 
 DEFAULT_REQUEST_HEADERS = {
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',

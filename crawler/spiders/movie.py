@@ -20,6 +20,12 @@ class MovieSpider(Spider):
     name = 'movie'
     handle_httpstatus_list = [404, 302]  # 404,302 代表需要登录才能查看。403 在DownloaderMiddleware中处理
 
+    def _get_dataset(self):
+        if self.settings.get('LOGIN_ENABLED', False):
+            return Movie.select().where(Movie.crawled == False)
+        else:
+            return Movie.select().where(Movie.crawled == False, Movie.type == Movie.TYPE_NORMAL)
+
     def start_requests(self):
         """
         从数据库读取没有爬取的影片，进行爬取；并不断循环，直到所有影片都爬完
@@ -28,7 +34,7 @@ class MovieSpider(Spider):
         """
         year = datetime.datetime.now().year
 
-        data_set = Movie.select().where(Movie.crawled == False)
+        data_set = self._get_dataset()
 
         while data_set.count() > 0:
 
@@ -44,7 +50,7 @@ class MovieSpider(Spider):
                               dont_filter=movie.require_login())  # 不要filter了
 
             # 还有一部分正在请求，因此会有些重复
-            data_set = Movie.select().where(Movie.crawled == False)
+            data_set = self._get_dataset()
 
     def parse(self, response):
         """
