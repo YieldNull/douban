@@ -14,10 +14,10 @@ class MovieSpiderTest(unittest.TestCase):
         for file in os.listdir('files'):
             path = join('files', file)
             if isfile(path) and file.startswith('movie_') and path.endswith('.html'):
-                response = fake_response_from_file(path, meta={'mid': 2123123})
+                response = fake_response_from_file(path, meta={'mid': 2123123, 'login': False})
 
                 spider = MovieSpider()
                 for item in spider.parse(response):
-                    pass
+                    print(item)
 
                 print(file)

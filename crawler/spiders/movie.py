@@ -3,6 +3,7 @@ import logging
 import datetime
 import random
 
+from peewee import fn
 from scrapy import Spider, Request
 from scrapy.exceptions import CloseSpider
 
@@ -22,9 +23,9 @@ class MovieSpider(Spider):
 
     def _get_dataset(self):
         if self.settings.get('LOGIN_ENABLED', False):
-            return Movie.select().where(Movie.crawled == False)
+            return Movie.select().where(Movie.crawled == False).order_by(fn.random())
         else:
-            return Movie.select().where(Movie.crawled == False, Movie.type == Movie.TYPE_NORMAL)
+            return Movie.select().where(Movie.crawled == False, Movie.type == Movie.TYPE_NORMAL).order_by(fn.random())
 
     def start_requests(self):
         """
@@ -81,18 +82,21 @@ class MovieSpider(Spider):
 
         # 基本信息
         info = response.xpath('//div[@id="info"]')
+        title = response.xpath('/html/head/title').re_first('(.*?)\(豆瓣\).*?')
 
-        if not info:
+        if not info or not title:
             logger.info('Bad response, logged_in:{:s}. {:s}'.format(logged_in, response.text))
             raise CloseSpider('IP is restricted')  # 停掉
 
-        title = response.xpath('//*[@id="content"]/h1/span[1]/text()').extract_first()
-        names = title.split()
+        title = title.strip()
+        full_title = response.xpath('//*[@id="content"]/h1/span[1]/text()').extract_first()
 
-        original_title = None
-        if len(names) > 1:
-            title = names[0]
-            original_title = ' '.join(names[1:])
+        if full_title:
+            original_title = full_title.replace(title, '').strip()
+            if len(original_title) == 0:
+                original_title = None
+        else:
+            original_title = None
 
         year = response.xpath('//*[@id="content"]/h1/span[2]/text()').extract_first()
 
