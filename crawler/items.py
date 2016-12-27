@@ -50,6 +50,7 @@ class MovieItem(Item):
 class ActorItem(Item):
     aid = Field()
     mids = Field()
+    finished = Field()
 
 
 class Actor404Item(Item):

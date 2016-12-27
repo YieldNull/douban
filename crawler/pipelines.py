@@ -141,7 +141,8 @@ class ActorPipeline(object):
             return item
 
         # normal link
-        Actor.update(crawled=True).where(Actor.aid == aid).execute()
+        if item['finished']:
+            Actor.update(crawled=True).where(Actor.aid == aid).execute()
 
         for mid in item['mids']:
             mid = int(mid)

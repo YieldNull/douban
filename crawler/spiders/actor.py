@@ -57,10 +57,10 @@ class ActorSpider(Spider):
         mids = response.selector.re('<a\s+href=".*?movie.douban.com/subject/(\d+)/">')
 
         logger.info('Got {:d} mids from {:d}. Start:{:d} Amount:{:d}'.format(len(mids), aid, start, total))
-        yield ActorItem(mids=mids, aid=aid)
 
         crawled = start + len(mids)
         if crawled < total:
+            yield ActorItem(mids=mids, aid=aid, finished=False)
             yield Request(
                 url='https://movie.douban.com/celebrity/{:d}/movies?start={:d}&format=text&sortby=time&'
                     .format(aid, crawled),
@@ -69,3 +69,5 @@ class ActorSpider(Spider):
                     .format(aid, start)},
                 meta={'aid': aid, 'start': crawled}
             )
+        else:
+            yield ActorItem(mids=mids, aid=aid, finished=True)
