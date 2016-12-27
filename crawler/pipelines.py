@@ -6,9 +6,9 @@ from scrapy.exceptions import DropItem
 from crawler.intermedia import Actor, Movie
 from peewee import IntegrityError, DoesNotExist
 
-from crawler.items import Movie404Item
+from crawler.items import Movie404Item, Actor404Item
 from crawler.spiders.actor import ActorSpider
-from crawler.spiders.movie import MovieSpider
+from crawler.spiders.movie import MovieSpider, MovieLoginSpider
 from crawler.spiders.seeds import SeedSpider
 
 import logging
@@ -63,7 +63,7 @@ class MoviePipeline(object):
         self.client.close()
 
     def process_item(self, item, spider):
-        if spider.name != MovieSpider.name:
+        if spider.name not in [MovieSpider.name, MovieLoginSpider.name]:
             return item
 
         mid = item['mid']
@@ -133,6 +133,14 @@ class ActorPipeline(object):
             return item
 
         aid = item['aid']
+
+        # broken link
+        if isinstance(item, Actor404Item):
+            Actor.update(crawled=True, type=Actor.TYPE_BROKEN).where(Actor.aid == aid).execute()
+            self.logger.error('Broken link: {:d}'.format(aid))
+            return item
+
+        # normal link
         Actor.update(crawled=True).where(Actor.aid == aid).execute()
 
         for mid in item['mids']:

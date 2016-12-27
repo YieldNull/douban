@@ -21,11 +21,14 @@ class MovieSpider(Spider):
     name = 'movie'
     handle_httpstatus_list = [404, 302]  # 404,302 代表需要登录才能查看。403 在DownloaderMiddleware中处理
 
-    def _get_dataset(self):
-        if self.settings.get('LOGIN_ENABLED', False):
-            return Movie.select().where(Movie.crawled == False).order_by(fn.random())
-        else:
-            return Movie.select().where(Movie.crawled == False, Movie.type == Movie.TYPE_NORMAL).order_by(fn.random())
+    custom_settings = {
+        'CONCURRENT_REQUESTS': 4,
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 4
+    }
+
+    @classmethod
+    def get_dataset(cls):
+        return Movie.select().where(Movie.crawled == False, Movie.type == Movie.TYPE_NORMAL).order_by(fn.random())
 
     def start_requests(self):
         """
@@ -35,23 +38,17 @@ class MovieSpider(Spider):
         """
         year = datetime.datetime.now().year
 
-        data_set = self._get_dataset()
+        data_set = self.get_dataset()
+        logger.info('Dataset count:{:d}'.format(data_set.count()))
 
-        while data_set.count() > 0:
-
-            logger.info('Dataset count:{:d}'.format(data_set.count()))
-
-            for movie in data_set:
-                yield Request(url='https://movie.douban.com/subject/{:d}/?from=tag'.format(movie.mid),
-                              headers={'Referer': 'https://www.douban.com/tag/{:d}/?source=topic_search'.format(
-                                  random.randint(1888, year))},
-                              meta={
-                                  'mid': movie.mid,
-                                  'login': movie.require_login()},  # 加入login字段，DownloaderMiddleware判断加何种Cookie
-                              dont_filter=movie.require_login())  # 不要filter了
-
-            # 还有一部分正在请求，因此会有些重复
-            data_set = self._get_dataset()
+        for movie in data_set:
+            yield Request(url='https://movie.douban.com/subject/{:d}/?from=tag'.format(movie.mid),
+                          headers={'Referer': 'https://www.douban.com/tag/{:d}/?source=topic_search'.format(
+                              random.randint(1888, year))},
+                          meta={
+                              'mid': movie.mid,
+                              'login': movie.require_login()},  # 加入login字段，DownloaderMiddleware判断加何种Cookie
+                          )
 
     def parse(self, response):
         """
@@ -74,7 +71,7 @@ class MovieSpider(Spider):
                 # 已登录，被禁，302跳到验证码页面
                 if location.find('sorry') > 0:  # https://www.douban.com/misc/sorry?original-url=...
                     yield None
-                    raise CloseSpider('IP is restricted')
+                    raise CloseSpider('Account is restricted')
 
             # broken link
             yield Movie404Item(mid=mid, logged_in=response.meta['login'])
@@ -204,3 +201,16 @@ class MovieSpider(Spider):
             actors.append((aid, actor))
 
         return actors
+
+
+class MovieLoginSpider(MovieSpider):
+    name = 'movie_login'
+
+    custom_settings = {
+        'CONCURRENT_REQUESTS': 1,
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 1
+    }
+
+    @classmethod
+    def get_dataset(cls):
+        return Movie.select().where(Movie.crawled == False, Movie.type == Movie.TYPE_LOGIN).order_by(fn.random())

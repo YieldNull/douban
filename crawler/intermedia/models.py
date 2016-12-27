@@ -17,8 +17,12 @@ class Movie(BaseModel):
 
 
 class Actor(BaseModel):
+    TYPE_NORMAL = 0
+    TYPE_BROKEN = 1
+
     aid = IntegerField(primary_key=True)
     crawled = BooleanField(default=False)
+    type = IntegerField(default=TYPE_NORMAL)
 
 
 db.create_tables([Movie, Actor], safe=True)

@@ -13,6 +13,11 @@ logger = logging.getLogger('SeedSpider')
 class SeedSpider(Spider):
     name = 'seed'
 
+    custom_settings = {
+        'CONCURRENT_REQUESTS': 4,
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 4
+    }
+
     url_tag = 'https://www.douban.com/tag/{tag}/?focus=movie'
     url_api = 'https://www.douban.com/j/tag/items?' \
               'start={start}&limit={limit}&topic_id={tid}&' \

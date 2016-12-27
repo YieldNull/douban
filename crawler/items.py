@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 from scrapy import Item, Field
 
 
@@ -52,3 +50,7 @@ class MovieItem(Item):
 class ActorItem(Item):
     aid = Field()
     mids = Field()
+
+
+class Actor404Item(Item):
+    aid = Field()

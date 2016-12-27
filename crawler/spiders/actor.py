@@ -1,8 +1,9 @@
+from peewee import fn
 from scrapy import Request, Spider
 from scrapy.exceptions import CloseSpider
 from logging import getLogger
 from crawler.intermedia import Actor
-from crawler.items import ActorItem
+from crawler.items import ActorItem, Actor404Item
 
 logger = getLogger('ActorSpider')
 
@@ -10,8 +11,22 @@ logger = getLogger('ActorSpider')
 class ActorSpider(Spider):
     name = 'actor'
 
+    custom_settings = {
+        'CONCURRENT_REQUESTS': 2,
+        'CONCURRENT_REQUESTS_PER_DOMAIN': 2
+    }
+
+    handle_httpstatus_list = [404]
+
+    @classmethod
+    def get_dataset(cls):
+        return Actor.select().where(Actor.crawled == False).order_by(fn.random())
+
     def start_requests(self):
-        for actor in Actor.select().where(Actor.crawled == False):
+        data_set = self.get_dataset()
+        logger.info('Dataset count:{:d}'.format(data_set.count()))
+
+        for actor in data_set:
             yield Request(
                 url='https://movie.douban.com/celebrity/{:d}/movies?sortby=time&format=text&'.format(actor.aid),
                 headers={
@@ -21,19 +36,21 @@ class ActorSpider(Spider):
             )
 
     def parse(self, response):
-
         aid = response.meta['aid']
         start = response.meta['start']
+
+        # 404 NOT FOUND
+        if response.status in self.handle_httpstatus_list:
+            yield Actor404Item(aid=aid)
+            raise StopIteration()
 
         title = response.xpath('/html/head/title')
         if not title:  # IP 被禁，返回一段JS
             raise CloseSpider('IP is restricted')
 
         total = title.re_first('.*?(\d+).*?')
-
-        # 找不到总数
-        if not total:
-            yield None
+        if not total:  # 找不到总数
+            yield Actor404Item(aid=aid)
             raise StopIteration()
 
         total = int(total)
