@@ -1,11 +1,9 @@
 import unittest
 import requests
-
 import crawler.fake as fake
 
 from crawler.spiders.movie import MovieSpider
-
-from . import fake_response_from_url
+from tests import fake_response_from_url
 
 
 class TestFakeBasics(unittest.TestCase):

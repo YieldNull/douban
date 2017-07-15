@@ -1,13 +1,15 @@
 from scrapy.exceptions import CloseSpider
+from crawler.items import Actor404Item
 from crawler.spiders.actor import ActorSpider
-from . import fake_response_from_file
+from tests import fake_response_from_file
+
 import unittest
 
 
 class ActorSpiderTest(unittest.TestCase):
     def setUp(self):
         self.spider = ActorSpider()
-        self.meta = {'start': 0, 'aid': 21212}
+        self.meta = {'start': 0, 'aid': 21212}  # 必要信息，随便伪造一个
 
     def test_no_title(self):
         response = fake_response_from_file('files/ip_restricted.html', meta=self.meta)
@@ -19,7 +21,7 @@ class ActorSpiderTest(unittest.TestCase):
 
         g = self.spider.parse(response)
 
-        self.assertIsNone(next(g))
+        self.assertIsInstance(next(g), Actor404Item)
         self.assertRaises(StopIteration, next, g)
 
     def test_one_page(self):

@@ -1,3 +1,5 @@
 scrapy
 peewee
 pymongo
+requests
+pymysql
