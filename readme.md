@@ -2,9 +2,9 @@
 
 使用[Scrapy](https://doc.scrapy.org/en/latest/)，共爬取`362622`条影视信息。其中电影`139784`条，电视剧综艺等`222838`条。
 
-首先通过年份标签(https://www.douban.com/tag/2016/?focus=movie)页面中的XHRAPI获取从1888年到现在的一些电影作为seeds。 然后爬取每个电影详情页面中的推荐电影，最后通过演职人员参与的作品进行查漏。
+首先通过年份标签 [https://www.douban.com/tag/2016/?focus=movie](https://www.douban.com/tag/2016/?focus=movie) 页面中的XHRAPI获取从1888年到现在的一些电影作为seeds。 然后爬取每个电影详情页面中的推荐电影，最后通过演职人员参与的作品进行查漏。
 
-see [notes](https://github.com/YieldNull/douban/wiki/Notes).
+SEE [notes](https://github.com/YieldNull/douban/wiki/Notes).
 
 ## LICENSE
 
